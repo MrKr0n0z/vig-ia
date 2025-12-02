@@ -397,22 +397,29 @@
             
             // Función para actualizar la hora
             function updateTime() {
-                const now = new Date();
-                const timeString = now.toLocaleTimeString('es-ES', { hour12: false });
-                const dateString = now.toLocaleDateString('es-ES', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                });
-                
-                const currentTime = document.getElementById('currentTime');
-                const currentDate = document.getElementById('currentDate');
-                const lastDetection = document.getElementById('lastDetection');
-                
-                if (currentTime) currentTime.textContent = timeString;
-                if (currentDate) currentDate.textContent = dateString.toUpperCase();
-                if (lastDetection) lastDetection.textContent = timeString;
+                try {
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString('es-ES', { hour12: false });
+                    const dateString = now.toLocaleDateString('es-ES', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                    
+                    const currentTime = document.getElementById('currentTime');
+                    const currentDate = document.getElementById('currentDate');
+                    const lastDetection = document.getElementById('lastDetection');
+                    
+                    if (currentTime) currentTime.textContent = timeString;
+                    if (currentDate) currentDate.textContent = dateString.toUpperCase();
+                    if (lastDetection) lastDetection.textContent = timeString;
+                    
+                    // Debug: mostrar en consola que el reloj funciona
+                    // console.log('Reloj actualizado:', timeString);
+                } catch (error) {
+                    console.error('Error actualizando reloj:', error);
+                }
             }
             
             // Función para agregar eventos al feed
@@ -436,7 +443,10 @@
                     'intruder': '🚨',
                     'movement': 'ℹ️',
                     'system': '⚙️',
-                    'guard': '👮‍♂️'
+                    'guard': '👮‍♂️',
+                    'persona_detenida': '🚫',
+                    'movimiento_sospechoso': '⚠️',
+                    'normal': '✅'
                 };
                 
                 eventElement.innerHTML = `
@@ -455,9 +465,14 @@
                 }
                 
                 // Actualizar nivel de amenaza si es una alerta
-                if (isAlert && type === 'intruder') {
-                    updateThreatLevel(3);
-                    showEvidence(type);
+                if (isAlert) {
+                    if (type === 'persona_detenida' || type === 'intruder') {
+                        updateThreatLevel(3);
+                        showEvidence(type);
+                    } else if (type === 'movimiento_sospechoso' || type === 'movement') {
+                        updateThreatLevel(2);
+                        showEvidence(type);
+                    }
                 }
             }
             
@@ -1143,28 +1158,18 @@
                     const data = await response.json();
                     
                     if (data.success && data.data.length > 0) {
-                        // Filtrar solo alertas reales y recientes
-                        const alertasReales = data.data.filter(alerta => {
-                            // Excluir alertas de prueba
-                            const esPrueba = alerta.description.includes('PRUEBA desde PHP') || 
-                                           alerta.description.includes('PRUEBA:') ||
-                                           alerta.track_id >= 900;
+                        // Filtrar alertas (solo excluir pruebas obvias)
+                        const alertasValidas = data.data.filter(alerta => {
+                            // Excluir solo alertas de prueba muy obvias
+                            const esPruebaObvia = alerta.description.includes('PRUEBA desde PHP') || 
+                                                alerta.track_id >= 900;
                             
-                            // Excluir falsas alarmas
-                            const esFalsaAlarma = alerta.is_false_alarm === true;
-                            
-                            // Excluir alertas muy antiguas (más de 2 horas)
-                            const fechaAlerta = new Date(alerta.created_at || alerta.alert_timestamp);
-                            const ahora = new Date();
-                            const dosHoras = 2 * 60 * 60 * 1000; // 2 horas en milisegundos
-                            const esMuyAntigua = (ahora - fechaAlerta) > dosHoras;
-                            
-                            // Solo incluir si NO es prueba, NO es falsa alarma y NO es muy antigua
-                            return !esPrueba && !esFalsaAlarma && !esMuyAntigua;
+                            // Incluir todas las demás alertas
+                            return !esPruebaObvia;
                         });
                         
-                        // Procesar solo nuevas alertas reales
-                        alertasReales.forEach(alerta => {
+                        // Procesar solo nuevas alertas válidas
+                        alertasValidas.forEach(alerta => {
                             if (alerta.id > lastAlertId) {
                                 const tipo = alerta.alert_type === 'persona_detenida' ? 'intruder' : 'movement';
                                 let mensaje = alerta.description;
