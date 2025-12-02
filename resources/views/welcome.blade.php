@@ -281,6 +281,11 @@
                                 ✅ Actividad Normal
                             </button>
                             
+                            <button onclick="testEvidencePanel()" 
+                                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-2 rounded text-xs transition-all duration-200">
+                                🔍 Test Panel
+                            </button>
+                            
                             <button onclick="limpiarAlertasPrueba()" 
                                     class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-1 px-2 rounded text-xs transition-all duration-200">
                                 🧹 Limpiar BD
@@ -511,10 +516,22 @@
             
             // Función para mostrar evidencia específica de MATLAB
             function showMatlabEvidence(alertType, trackId, duration, frameCount) {
+                console.log('showMatlabEvidence llamada:', alertType, trackId, duration, frameCount);
+                
                 const evidencePanel = document.getElementById('evidencePanel');
                 const evidenceStatus = document.getElementById('evidenceStatus');
                 const evidenceStatusText = document.getElementById('evidenceStatusText');
                 const alertOverlay = document.getElementById('alertOverlay');
+                
+                // Verificar que los elementos existen
+                if (!evidencePanel || !evidenceStatus || !evidenceStatusText) {
+                    console.error('Elementos de evidencia no encontrados:', {
+                        evidencePanel: !!evidencePanel,
+                        evidenceStatus: !!evidenceStatus, 
+                        evidenceStatusText: !!evidenceStatusText
+                    });
+                    return;
+                }
                 
                 const colors = {
                     'persona_detenida': { bg: 'border-red-500', status: 'bg-red-500', text: 'PERSONA DETENIDA' },
@@ -1114,6 +1131,26 @@
                 updateThreatLevel(1);
             }
             
+            // Función para probar el panel de evidencia
+            function testEvidencePanel() {
+                console.log('Test del panel de evidencia iniciado');
+                addEvent('system', 'SISTEMA', '🔍 Probando panel de evidencia...', false);
+                
+                // Probar con datos de persona detenida
+                showMatlabEvidence('persona_detenida', 123, 25, 750);
+                
+                // Cambiar a movimiento sospechoso después de 3 segundos
+                setTimeout(() => {
+                    showMatlabEvidence('movimiento_sospechoso', 456, 35, 1050);
+                }, 3000);
+                
+                // Volver a estado normal después de 6 segundos
+                setTimeout(() => {
+                    resetEvidencePanel();
+                    addEvent('system', 'SISTEMA', '✅ Test del panel completado', false);
+                }, 6000);
+            }
+            
             // Funciones para conectar con la API real
             async function cargarEstadoSistema() {
                 try {
@@ -1213,13 +1250,13 @@
                                 const iconoTipo = alerta.alert_type === 'persona_detenida' ? '🚫' : '⚠️';
                                 addEvent(alerta.alert_type, alerta.camera_id.toUpperCase(), `${iconoTipo} ${mensajeLimpio}`, true);
                                 
+                                // Mostrar evidencia para todos los tipos de alerta
+                                console.log('Procesando alerta MATLAB:', alerta.alert_type, alerta.track_id);
+                                showMatlabEvidence(alerta.alert_type, alerta.track_id, alerta.duration_seconds, alerta.frame_count);
+                                updateMatlabConnectionStatus(true);
+                                
                                 if (alerta.alert_type === 'persona_detenida') {
                                     triggerAlert('intruder');
-                                    showMatlabEvidence(alerta.alert_type, alerta.track_id, alerta.duration_seconds, alerta.frame_count);
-                                    updateMatlabConnectionStatus(true);
-                                } else if (alerta.alert_type === 'movimiento_sospechoso') {
-                                    showMatlabEvidence(alerta.alert_type, alerta.track_id, alerta.duration_seconds, alerta.frame_count);
-                                    updateMatlabConnectionStatus(true);
                                 }
                                 
                                 lastAlertId = Math.max(lastAlertId, alerta.id);
