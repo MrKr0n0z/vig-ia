@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>VIG-IA - Sistema de Videovigilancia Inteligente</title>
         
         <!-- Fonts -->
@@ -158,7 +159,7 @@
                         </div>
                         <div>
                             <h1 class="font-orbitron text-2xl font-bold text-green-400 glitch">VIG-IA</h1>
-                            <p class="text-sm text-green-300">Sistema de Videovigilancia Inteligente</p>
+                            <p class="text-sm text-green-300">Detección de Comportamiento - MATLAB Integration</p>
                         </div>
                     </div>
                     
@@ -215,11 +216,12 @@
                             <div class="text-center text-gray-500">
                                 <div class="w-16 h-16 border-4 border-gray-500 rounded-full mb-4 opacity-50">
                                     <div class="w-full h-full flex items-center justify-center">
-                                        <span class="text-2xl">📷</span>
+                                        <span class="text-2xl">🔍</span>
                                     </div>
                                 </div>
-                                <p class="text-sm">Sin detecciones recientes</p>
-                                <p class="text-xs mt-2">La evidencia aparecerá aquí</p>
+                                <p class="text-sm">Esperando detección MATLAB</p>
+                                <p class="text-xs mt-1">Track ID y evidencia</p>
+                                <p class="text-xs text-gray-600">aparecerán aquí</p>
                             </div>
                         </div>
                         <!-- Overlay de alerta que se activa cuando hay detección -->
@@ -238,9 +240,18 @@
             <div class="grid md:grid-cols-2 gap-6">
                 <!-- Feed de Eventos en Tiempo Real -->
                 <div class="bg-gray-900 border-2 border-green-500 rounded-lg p-6">
-                    <h2 class="font-orbitron text-xl font-bold mb-4 flex items-center">
-                        <span class="w-3 h-3 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
-                        FEED DE EVENTOS
+                    <h2 class="font-orbitron text-xl font-bold mb-4 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+                            FEED DE EVENTOS
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button id="btnEventosAuto" onclick="toggleEventosAutomaticos()" 
+                                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded text-xs transition-all duration-200">
+                                ▶️ INICIAR PRUEBA
+                            </button>
+                            <span id="statusEventos" class="text-xs text-gray-400">SOLO MATLAB</span>
+                        </div>
                     </h2>
                     
                     <div id="eventFeed" class="bg-black rounded-lg p-4 h-80 overflow-y-auto border border-green-500">
@@ -249,26 +260,35 @@
                         </div>
                     </div>
                     
-                    <!-- Botones de Simulación (ocultos pero funcionales) -->
-                    <div class="mt-4 grid grid-cols-2 gap-2">
-                        <button onclick="simulateEvent('student')" 
-                                class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded text-sm transition-all duration-200">
-                            ✅ Simular Estudiante
-                        </button>
+                    <!-- Controles de Simulación MATLAB -->
+                    <div class="mt-4">
+                        <div class="text-xs text-gray-400 mb-2">SIMULACIÓN DE ALERTAS MATLAB:</div>
+                        <div class="grid grid-cols-1 gap-2">
+                            <button onclick="simulateMatlabAlert('persona_detenida')" 
+                                    class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded text-sm transition-all duration-200">
+                                🚨 Persona Detenida (15-20s+)
+                            </button>
+                            
+                            <button onclick="simulateMatlabAlert('movimiento_sospechoso')" 
+                                    class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-3 rounded text-sm transition-all duration-200">
+                                ⚠️ Movimiento Sospechoso (Va-y-Viene)
+                            </button>
+                        </div>
                         
-                        <button onclick="simulateEvent('intruder')" 
-                                class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded text-sm transition-all duration-200">
-                            🚨 Simular Intruso
-                        </button>
-                        
-                        <button onclick="simulateEvent('movement')" 
-                                class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-3 rounded text-sm transition-all duration-200">
-                            🚶 Simular Movimiento
-                        </button>
-                        
+                        <div class="mt-2 grid grid-cols-2 gap-2">
+                            <button onclick="simulateNormalActivity()" 
+                                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-2 rounded text-xs transition-all duration-200">
+                                ✅ Actividad Normal
+                            </button>
+                            
+                            <button onclick="limpiarAlertasPrueba()" 
+                                    class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-1 px-2 rounded text-xs transition-all duration-200">
+                                🧹 Limpiar BD
+                            </button>
+                        </div>
                         <button onclick="clearEventFeed()" 
-                                class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-3 rounded text-sm transition-all duration-200">
-                            🗑️ Limpiar Feed
+                                class="w-full mt-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-1 px-2 rounded text-xs transition-all duration-200">
+                            🗑️ Limpiar Todo
                         </button>
                     </div>
                 </div>
@@ -298,48 +318,69 @@
                     
                     <div class="space-y-4">
                         <div class="flex justify-between items-center">
-                            <span>Cámaras Activas:</span>
-                            <span class="font-orbitron font-bold text-red-400">0/1</span>
+                            <span>Webcam Status:</span>
+                            <span id="webcamStatus" class="font-orbitron font-bold text-red-400">DESCONECTADA</span>
                         </div>
                         
                         <div class="flex justify-between items-center">
-                            <span>IA de Detección:</span>
-                            <span class="font-orbitron font-bold text-green-400">ACTIVA</span>
+                            <span>MATLAB Tracking:</span>
+                            <span id="matlabTracking" class="font-orbitron font-bold text-red-400">INACTIVO</span>
                         </div>
                         
                         <div class="flex justify-between items-center">
-                            <span>Almacenamiento:</span>
-                            <span class="font-orbitron font-bold text-yellow-400">78%</span>
+                            <span>Tracks Activos:</span>
+                            <span id="activeTracks" class="font-orbitron font-bold text-gray-400">0</span>
                         </div>
                         
                         <div class="flex justify-between items-center">
-                            <span>Conexión MATLAB:</span>
-                            <span id="matlabStatus" class="font-orbitron font-bold text-red-400">SIN CONEXIÓN</span>
+                            <span>Conexión API:</span>
+                            <span id="apiStatus" class="font-orbitron font-bold text-green-400">CONECTADA</span>
                         </div>
                         
                         <div class="flex justify-between items-center">
-                            <span>Última Detección:</span>
-                            <span class="font-orbitron font-bold text-green-400" id="lastDetection">--:--:--</span>
+                            <span>Última Alerta:</span>
+                            <span class="font-orbitron font-bold text-gray-400" id="lastAlert">Sin alertas</span>
+                        </div>
+                        
+                        <div class="mt-4 p-3 bg-gray-800 rounded">
+                            <div class="text-xs text-gray-400 mb-1">ESTADÍSTICAS MATLAB:</div>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div>Personas Detenidas: <span id="personasDetenidas" class="text-red-400">0</span></div>
+                                <div>Mov. Sospechosos: <span id="movimientosSospechosos" class="text-orange-400">0</span></div>
+                                <div>Frames Analizados: <span id="framesAnalizados" class="text-blue-400">0</span></div>
+                                <div>Tiempo Activo: <span id="tiempoActivo" class="text-green-400">0m</span></div>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- Botones de Acción del Guardia -->
+                    <!-- Protocolos de Respuesta -->
                     <div class="mt-6 space-y-2">
-                        <h3 class="font-orbitron font-bold text-sm mb-3 text-yellow-400">ACCIONES DE EMERGENCIA:</h3>
-                        <button onclick="guardAction('silence')" 
-                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-all duration-200">
-                            🔇 SILENCIAR ALARMA
+                        <h3 class="font-orbitron font-bold text-sm mb-3 text-yellow-400">PROTOCOLOS DE RESPUESTA:</h3>
+                        
+                        <div class="text-xs text-gray-400 mb-2">Para Persona Detenida:</div>
+                        <button onclick="guardAction('check_person')" 
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-all duration-200 text-sm">
+                            🔍 VERIFICAR IDENTIDAD
                         </button>
                         
-                        <button onclick="guardAction('false_alarm')" 
-                                class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded transition-all duration-200">
-                            ❌ REPORTAR FALSA ALARMA
+                        <div class="text-xs text-gray-400 mb-2 mt-3">Para Movimiento Sospechoso:</div>
+                        <button onclick="guardAction('monitor_area')" 
+                                class="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded transition-all duration-200 text-sm">
+                            📹 MONITOREAR ÁREA
                         </button>
                         
-                        <button onclick="guardAction('call_police')" 
-                                class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded transition-all duration-200 animate-pulse">
-                            🚔 LLAMAR A POLICÍA
-                        </button>
+                        <div class="text-xs text-gray-400 mb-2 mt-3">Acciones Generales:</div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="guardAction('false_alarm')" 
+                                    class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-3 rounded transition-all duration-200 text-xs">
+                                ❌ FALSA ALARMA
+                            </button>
+                            
+                            <button onclick="guardAction('emergency')" 
+                                    class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded transition-all duration-200 text-xs animate-pulse">
+                                🆘 EMERGENCIA
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -350,6 +391,9 @@
             let eventCount = 0;
             let currentThreatLevel = 1; // 1=Normal, 2=Precaución, 3=Crítico
             let events = [];
+            let lastAlertId = 0; // Para polling de nuevas alertas
+            let eventosAutomaticos = false; // Control de eventos programados
+            let intervaloEventos = null; // Referencia al intervalo
             
             // Función para actualizar la hora
             function updateTime() {
@@ -362,9 +406,13 @@
                     day: 'numeric' 
                 });
                 
-                document.getElementById('currentTime').textContent = timeString;
-                document.getElementById('currentDate').textContent = dateString.toUpperCase();
-                document.getElementById('lastDetection').textContent = timeString;
+                const currentTime = document.getElementById('currentTime');
+                const currentDate = document.getElementById('currentDate');
+                const lastDetection = document.getElementById('lastDetection');
+                
+                if (currentTime) currentTime.textContent = timeString;
+                if (currentDate) currentDate.textContent = dateString.toUpperCase();
+                if (lastDetection) lastDetection.textContent = timeString;
             }
             
             // Función para agregar eventos al feed
@@ -372,6 +420,11 @@
                 const now = new Date();
                 const timeString = now.toLocaleTimeString('es-ES', { hour12: false });
                 const eventFeed = document.getElementById('eventFeed');
+                
+                if (!eventFeed) {
+                    console.warn('EventFeed element not found');
+                    return;
+                }
                 
                 eventCount++;
                 
@@ -433,89 +486,419 @@
                 }
             }
             
-            // Función para mostrar evidencia
-            function showEvidence(type) {
+            // Función para mostrar evidencia específica de MATLAB
+            function showMatlabEvidence(alertType, trackId, duration, frameCount) {
                 const evidencePanel = document.getElementById('evidencePanel');
                 const evidenceStatus = document.getElementById('evidenceStatus');
                 const evidenceStatusText = document.getElementById('evidenceStatusText');
                 const alertOverlay = document.getElementById('alertOverlay');
                 
-                // Cambiar el borde a rojo y hacer que parpadee
-                evidencePanel.className = 'bg-gray-900 border-2 border-red-500 rounded-lg overflow-hidden animate-pulse-red';
-                evidenceStatus.className = 'w-2 h-2 bg-red-500 rounded-full animate-pulse';
-                evidenceStatusText.textContent = 'ALERTA';
+                const colors = {
+                    'persona_detenida': { bg: 'border-red-500', status: 'bg-red-500', text: 'PERSONA DETENIDA' },
+                    'movimiento_sospechoso': { bg: 'border-orange-500', status: 'bg-orange-500', text: 'MOV. SOSPECHOSO' }
+                };
+                
+                const config = colors[alertType] || colors['persona_detenida'];
+                
+                // Cambiar apariencia del panel
+                evidencePanel.className = `bg-gray-900 border-2 ${config.bg} rounded-lg overflow-hidden animate-pulse`;
+                evidenceStatus.className = `w-2 h-2 ${config.status} rounded-full animate-pulse`;
+                evidenceStatusText.textContent = config.text;
                 evidenceStatusText.className = 'text-xs text-red-400 font-bold';
                 
-                // Mostrar overlay de alerta
-                alertOverlay.classList.remove('hidden');
-                alertOverlay.classList.add('flex');
-                
-                // Simular "foto de evidencia" después de unos segundos
-                setTimeout(() => {
-                    alertOverlay.classList.add('hidden');
-                    alertOverlay.classList.remove('flex');
+                // Mostrar overlay temporal
+                if (alertOverlay) {
+                    alertOverlay.classList.remove('hidden');
+                    alertOverlay.classList.add('flex');
                     
-                    // Mostrar imagen simulada de evidencia
+                    setTimeout(() => {
+                        alertOverlay.classList.add('hidden');
+                        alertOverlay.classList.remove('flex');
+                    }, 2000);
+                }
+                
+                // Mostrar información detallada de MATLAB
+                setTimeout(() => {
                     document.getElementById('evidenceContent').innerHTML = `
-                        <div class="w-full h-full bg-red-900 flex items-center justify-center relative">
+                        <div class="w-full h-full ${alertType === 'persona_detenida' ? 'bg-red-900' : 'bg-orange-900'} flex items-center justify-center relative">
                             <div class="text-center">
-                                <div class="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center mb-2 animate-pulse">
-                                    <span class="text-3xl">👤</span>
+                                <div class="w-20 h-20 ${alertType === 'persona_detenida' ? 'bg-red-600' : 'bg-orange-600'} rounded-full flex items-center justify-center mb-2 animate-pulse">
+                                    <span class="text-3xl">${alertType === 'persona_detenida' ? '🛑' : '🔄'}</span>
                                 </div>
-                                <div class="text-red-300 font-bold text-sm">SUJETO NO IDENTIFICADO</div>
-                                <div class="text-red-200 text-xs mt-1">Confianza: 94%</div>
-                                <div class="text-red-200 text-xs">Cámara: CAM-01</div>
+                                <div class="${alertType === 'persona_detenida' ? 'text-red-300' : 'text-orange-300'} font-bold text-sm">TRACK ID: ${trackId}</div>
+                                <div class="${alertType === 'persona_detenida' ? 'text-red-200' : 'text-orange-200'} text-xs mt-1">Duración: ${duration}s</div>
+                                <div class="${alertType === 'persona_detenida' ? 'text-red-200' : 'text-orange-200'} text-xs">Frames: ${frameCount}</div>
+                                <div class="${alertType === 'persona_detenida' ? 'text-red-200' : 'text-orange-200'} text-xs">Cámara: CAM-01</div>
                             </div>
-                            <div class="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-bold animate-blink">
-                                EVIDENCIA
+                            <div class="absolute top-2 right-2 ${alertType === 'persona_detenida' ? 'bg-red-600' : 'bg-orange-600'} text-white text-xs px-2 py-1 rounded font-bold animate-blink">
+                                MATLAB
                             </div>
                         </div>
                     `;
-                }, 3000);
+                }, 2500);
             }
             
-            // Función para simular eventos
-            function simulateEvent(type) {
-                const cameras = ['CAM-01'];
-                const randomCamera = cameras[Math.floor(Math.random() * cameras.length)];
+            // Función para simular alertas específicas de MATLAB
+            function simulateMatlabAlert(alertType) {
+                const trackId = Math.floor(Math.random() * 50) + 1;
+                const frameCount = Math.floor(Math.random() * 1000) + 500;
                 
-                const eventMessages = {
-                    'student': `Estudiante detectado (Acceso Autorizado)`,
-                    'intruder': `⚠️ ALERTA: Rostro no reconocido - Posible intruso`,
-                    'movement': `Movimiento detectado en área vigilada`
-                };
+                let message, duration, isHighAlert;
                 
-                if (type === 'intruder') {
-                    addEvent(type, randomCamera, eventMessages[type], true);
+                if (alertType === 'persona_detenida') {
+                    duration = Math.floor(Math.random() * 45) + 15; // 15-60 segundos
+                    message = `🚨 Track ${trackId}: Persona detenida por ${duration} segundos`;
+                    isHighAlert = true;
+                    
+                    // Actualizar estadísticas
+                    updateMatlabStats('personasDetenidas');
+                    
+                } else if (alertType === 'movimiento_sospechoso') {
+                    duration = Math.floor(Math.random() * 30) + 20; // 20-50 segundos
+                    const changes = Math.floor(Math.random() * 6) + 4; // 4-10 cambios
+                    message = `⚠️ Track ${trackId}: Movimiento sospechoso (va-y-viene). ${changes} cambios de dirección`;
+                    isHighAlert = false;
+                    
+                    // Actualizar estadísticas
+                    updateMatlabStats('movimientosSospechosos');
+                }
+                
+                // Agregar al feed
+                addEvent(alertType, 'CAM-01', message, isHighAlert);
+                
+                // Actualizar panel de evidencia
+                showMatlabEvidence(alertType, trackId, duration, frameCount);
+                
+                // Actualizar nivel de amenaza
+                if (alertType === 'persona_detenida') {
+                    updateThreatLevel(3);
                     triggerAlert('intruder');
                 } else {
-                    addEvent(type, randomCamera, eventMessages[type], false);
-                    if (type === 'student') {
-                        updateThreatLevel(1);
-                    } else if (type === 'movement') {
-                        updateThreatLevel(2);
+                    updateThreatLevel(2);
+                }
+                
+                // Actualizar última alerta
+                const lastAlert = document.getElementById('lastAlert');
+                if (lastAlert) {
+                    const now = new Date();
+                    lastAlert.textContent = now.toLocaleTimeString('es-ES', { hour12: false });
+                    lastAlert.className = 'font-orbitron font-bold text-red-400';
+                }
+            }
+            
+            // Función para simular actividad normal
+            function simulateNormalActivity() {
+                const activities = [
+                    'Persona transitando normalmente',
+                    'Estudiante identificado correctamente',
+                    'Movimiento regular detectado',
+                    'Persona saliendo del área vigilada'
+                ];
+                
+                const activity = activities[Math.floor(Math.random() * activities.length)];
+                addEvent('normal', 'CAM-01', `✅ ${activity}`, false);
+                updateThreatLevel(1);
+            }
+            
+            // Función para actualizar estadísticas MATLAB
+            function updateMatlabStats(type) {
+                const element = document.getElementById(type);
+                if (element) {
+                    const current = parseInt(element.textContent) || 0;
+                    element.textContent = current + 1;
+                }
+                
+                // Actualizar frames analizados
+                const framesEl = document.getElementById('framesAnalizados');
+                if (framesEl) {
+                    const frames = parseInt(framesEl.textContent) || 0;
+                    framesEl.textContent = frames + Math.floor(Math.random() * 200) + 100;
+                }
+            }
+            
+            // Función para acciones del guardia (protocolos específicos)
+            async function guardAction(action) {
+                const actions = {
+                    'check_person': '👮‍♂️ Iniciando verificación de identidad',
+                    'monitor_area': '📹 Incrementando monitoreo en área sospechosa',
+                    'false_alarm': '❌ Falsa alarma reportada - Sistema restablecido',
+                    'emergency': '🚨 PROTOCOLO DE EMERGENCIA ACTIVADO'
+                };
+                
+                const isEmergency = action === 'emergency';
+                addEvent('guard', 'OPERADOR', actions[action], isEmergency);
+                
+                if (action === 'check_person') {
+                    // Protocolo para persona detenida
+                    setTimeout(() => {
+                        addEvent('guard', 'OPERADOR', '🔍 Verificando bases de datos de identidad...', false);
+                    }, 2000);
+                    
+                } else if (action === 'monitor_area') {
+                    // Protocolo para movimiento sospechoso
+                    setTimeout(() => {
+                        addEvent('guard', 'OPERADOR', '👁️ Activando cámaras adicionales en sector...', false);
+                    }, 2000);
+                    
+                } else if (action === 'false_alarm') {
+                    // Marcar como falsa alarma en la API
+                    try {
+                        const response = await fetch('/api/alertas?solo_no_vistas=true');
+                        const data = await response.json();
+                        
+                        if (data.success && data.data.length > 0) {
+                            // Marcar la última alerta como falsa alarma
+                            const ultimaAlerta = data.data[0];
+                            await fetch(`/api/alertas/${ultimaAlerta.id}`, { method: 'DELETE' });
+                        }
+                    } catch (error) {
+                        console.error('Error marcando falsa alarma:', error);
+                    }
+                    
+                    clearAlerts();
+                    updateThreatLevel(1);
+                    resetEvidencePanel();
+                    
+                } else if (action === 'emergency') {
+                    // Activar protocolo de emergencia
+                    activateEmergencyEffects();
+                    setTimeout(() => {
+                        addEvent('guard', 'SISTEMA', '📞 Contactando a las autoridades...', true);
+                    }, 1000);
+                }
+            }
+            
+            // Función para actualizar estado de conexión MATLAB
+            function updateMatlabConnectionStatus(connected) {
+                const webcamStatus = document.getElementById('webcamStatus');
+                const matlabTracking = document.getElementById('matlabTracking');
+                const activeTracks = document.getElementById('activeTracks');
+                
+                if (connected) {
+                    if (webcamStatus) {
+                        webcamStatus.textContent = 'CONECTADA';
+                        webcamStatus.className = 'font-orbitron font-bold text-green-400';
+                    }
+                    if (matlabTracking) {
+                        matlabTracking.textContent = 'ACTIVO';
+                        matlabTracking.className = 'font-orbitron font-bold text-green-400';
+                    }
+                } else {
+                    if (webcamStatus) {
+                        webcamStatus.textContent = 'DESCONECTADA';
+                        webcamStatus.className = 'font-orbitron font-bold text-red-400';
+                    }
+                    if (matlabTracking) {
+                        matlabTracking.textContent = 'INACTIVO';
+                        matlabTracking.className = 'font-orbitron font-bold text-red-400';
                     }
                 }
             }
             
-            // Función para acciones del guardia
-            function guardAction(action) {
-                const actions = {
-                    'silence': 'Alarma silenciada por el operador',
-                    'false_alarm': 'Falsa alarma reportada - Sistema restablecido',
-                    'call_police': '🚔 ALERTA MÁXIMA: Contactando con las autoridades'
-                };
+            // Función para actualizar tiempo activo
+            function updateActiveTime() {
+                const tiempoActivo = document.getElementById('tiempoActivo');
+                if (tiempoActivo) {
+                    const current = parseInt(tiempoActivo.textContent) || 0;
+                    tiempoActivo.textContent = (current + 1) + 'm';
+                }
+            }
+            
+            // Función para alternar eventos automáticos
+            function toggleEventosAutomaticos() {
+                const btn = document.getElementById('btnEventosAuto');
+                const status = document.getElementById('statusEventos');
                 
-                addEvent('guard', 'SISTEMA', actions[action], action === 'call_police');
+                if (!eventosAutomaticos) {
+                    // Iniciar eventos automáticos
+                    eventosAutomaticos = true;
+                    btn.textContent = '⏹️ DETENER PRUEBA';
+                    btn.className = 'bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded text-xs transition-all duration-200';
+                    status.textContent = 'MODO PRUEBA';
+                    status.className = 'text-xs text-yellow-400 animate-pulse';
+                    
+                    addEvent('system', 'SISTEMA', '🧪 Modo de prueba activado - Eventos simulados', false);
+                    
+                    // Iniciar generación automática de eventos
+                    iniciarEventosAutomaticos();
+                    
+                } else {
+                    // Detener eventos automáticos
+                    eventosAutomaticos = false;
+                    btn.textContent = '▶️ INICIAR PRUEBA';
+                    btn.className = 'bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded text-xs transition-all duration-200';
+                    status.textContent = 'SOLO MATLAB';
+                    status.className = 'text-xs text-gray-400';
+                    
+                    addEvent('system', 'SISTEMA', '✅ Modo de prueba desactivado - Solo alertas reales', false);
+                    
+                    // Detener el intervalo
+                    if (intervaloEventos) {
+                        clearInterval(intervaloEventos);
+                        intervaloEventos = null;
+                    }
+                    
+                    // Limpiar alertas de prueba de la base de datos
+                    setTimeout(() => {
+                        limpiarAlertasPrueba();
+                    }, 1000);
+                }
+            }
+            
+            // Función para iniciar eventos automáticos
+            function iniciarEventosAutomaticos() {
+                if (intervaloEventos) {
+                    clearInterval(intervaloEventos);
+                }
                 
-                if (action === 'silence' || action === 'false_alarm') {
-                    // Limpiar alertas y restablecer nivel de amenaza
-                    clearAlerts();
-                    updateThreatLevel(1);
-                    resetEvidencePanel();
-                } else if (action === 'call_police') {
-                    // Activar efectos de emergencia máxima
-                    activateEmergencyEffects();
+                // Generar eventos cada 8-15 segundos
+                intervaloEventos = setInterval(() => {
+                    if (!eventosAutomaticos) {
+                        clearInterval(intervaloEventos);
+                        return;
+                    }
+                    
+                    generarEventoAleatorio();
+                }, Math.random() * 7000 + 8000); // 8-15 segundos
+            }
+            
+            // Función para generar evento aleatorio
+            function generarEventoAleatorio() {
+                const tiposEventos = [
+                    {
+                        tipo: 'normal',
+                        peso: 60, // 60% probabilidad
+                        eventos: [
+                            'Persona transitando normalmente por el área',
+                            'Estudiante detectado - Acceso autorizado',
+                            'Movimiento regular sin anomalías',
+                            'Persona saliendo del área de vigilancia',
+                            'Detección de movimiento - Patrón normal'
+                        ]
+                    },
+                    {
+                        tipo: 'persona_detenida',
+                        peso: 25, // 25% probabilidad
+                        eventos: [
+                            'Track {id}: Persona detenida por {duration} segundos',
+                            'Track {id}: Quietud prolongada detectada - {duration}s',
+                            'Track {id}: Persona estacionaria - Duración {duration}s'
+                        ]
+                    },
+                    {
+                        tipo: 'movimiento_sospechoso',
+                        peso: 15, // 15% probabilidad
+                        eventos: [
+                            'Track {id}: Movimiento repetitivo detectado - {changes} cambios',
+                            'Track {id}: Patrón va-y-viene - {changes} inversiones de dirección',
+                            'Track {id}: Comportamiento errático - {changes} cambios bruscos'
+                        ]
+                    }
+                ];
+                
+                // Seleccionar tipo basado en peso
+                const random = Math.random() * 100;
+                let acumulado = 0;
+                let tipoSeleccionado = null;
+                
+                for (const tipo of tiposEventos) {
+                    acumulado += tipo.peso;
+                    if (random <= acumulado) {
+                        tipoSeleccionado = tipo;
+                        break;
+                    }
+                }
+                
+                if (!tipoSeleccionado) tipoSeleccionado = tiposEventos[0];
+                
+                // Generar evento específico
+                const eventoTemplate = tipoSeleccionado.eventos[Math.floor(Math.random() * tipoSeleccionado.eventos.length)];
+                const trackId = Math.floor(Math.random() * 20) + 1;
+                const duration = Math.floor(Math.random() * 40) + 15;
+                const changes = Math.floor(Math.random() * 6) + 4;
+                
+                let mensaje = eventoTemplate
+                    .replace('{id}', trackId)
+                    .replace('{duration}', duration)
+                    .replace('{changes}', changes);
+                
+                // Agregar prefijo según tipo
+                if (tipoSeleccionado.tipo === 'normal') {
+                    mensaje = `✅ ${mensaje}`;
+                    addEvent('normal', 'CAM-01', mensaje, false);
+                } else if (tipoSeleccionado.tipo === 'persona_detenida') {
+                    mensaje = `🚨 ${mensaje}`;
+                    addEvent('persona_detenida', 'CAM-01', mensaje, true);
+                    
+                    // Simular alerta visual para pruebas
+                    if (Math.random() > 0.7) { // 30% de probabilidad de alerta visual
+                        setTimeout(() => {
+                            showMatlabEvidence('persona_detenida', trackId, duration, duration * 30);
+                            updateThreatLevel(3);
+                        }, 1000);
+                    }
+                } else if (tipoSeleccionado.tipo === 'movimiento_sospechoso') {
+                    mensaje = `⚠️ ${mensaje}`;
+                    addEvent('movimiento_sospechoso', 'CAM-01', mensaje, false);
+                    
+                    // Simular alerta visual para pruebas
+                    if (Math.random() > 0.8) { // 20% de probabilidad de alerta visual
+                        setTimeout(() => {
+                            showMatlabEvidence('movimiento_sospechoso', trackId, duration, duration * 30);
+                            updateThreatLevel(2);
+                        }, 1000);
+                    }
+                }
+            }
+            
+            // Función para limpiar alertas de prueba y falsas alarmas de la base de datos
+            async function limpiarAlertasPrueba() {
+                try {
+                    // Obtener todas las alertas
+                    const response = await fetch('/api/alertas');
+                    const data = await response.json();
+                    
+                    if (data.success && data.data.length > 0) {
+                        // Filtrar alertas problemáticas
+                        const alertasEliminar = data.data.filter(alerta => {
+                            const esPrueba = alerta.description.includes('PRUEBA desde PHP') || 
+                                           alerta.description.includes('PRUEBA:') ||
+                                           alerta.track_id >= 900;
+                            
+                            const esFalsaAlarma = alerta.is_false_alarm === true;
+                            
+                            // Alertas muy antiguas (más de 24 horas)
+                            const fechaAlerta = new Date(alerta.created_at || alerta.alert_timestamp);
+                            const ahora = new Date();
+                            const unDia = 24 * 60 * 60 * 1000;
+                            const esMuyAntigua = (ahora - fechaAlerta) > unDia;
+                            
+                            return esPrueba || esFalsaAlarma || esMuyAntigua;
+                        });
+                        
+                        // Eliminar cada alerta problemática
+                        let eliminadas = 0;
+                        for (const alerta of alertasEliminar) {
+                            try {
+                                await fetch(`/api/alertas/${alerta.id}`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                                    }
+                                });
+                                eliminadas++;
+                            } catch (err) {
+                                console.warn('Error eliminando alerta', alerta.id, err);
+                            }
+                        }
+                        
+                        if (eliminadas > 0) {
+                            addEvent('system', 'SISTEMA', `🗑️ ${eliminadas} alertas no válidas eliminadas`, false);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error limpiando alertas:', error);
                 }
             }
             
@@ -524,6 +907,24 @@
                 document.getElementById('eventFeed').innerHTML = '<div class="text-center text-gray-500 text-sm">Feed de eventos limpio</div>';
                 updateThreatLevel(1);
                 resetEvidencePanel();
+                
+                // Detener eventos automáticos si están activos
+                if (eventosAutomaticos) {
+                    toggleEventosAutomaticos();
+                }
+                
+                // Limpiar alertas de prueba de la base de datos
+                limpiarAlertasPrueba();
+                
+                // Resetear estadísticas
+                const stats = ['personasDetenidas', 'movimientosSospechosos'];
+                stats.forEach(stat => {
+                    const el = document.getElementById(stat);
+                    if (el) el.textContent = '0';
+                });
+                
+                // Resetear lastAlertId
+                lastAlertId = 0;
             }
             
             // Función para resetear el panel de evidencia
@@ -673,32 +1074,198 @@
                 clearAlerts();
             }
             
+            // Funciones para conectar con la API real
+            async function cargarEstadoSistema() {
+                try {
+                    const response = await fetch('/api/sistema/estado');
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.data) {
+                        const estado = data.data;
+                        
+                        // Actualizar conexión MATLAB de forma segura
+                        const matlabStatus = document.getElementById('matlabTracking');
+                        if (matlabStatus) {
+                            matlabStatus.textContent = estado.matlab_connected ? 'ACTIVO' : 'INACTIVO';
+                            matlabStatus.className = `font-orbitron font-bold ${estado.matlab_connected ? 'text-green-400' : 'text-red-400'}`;
+                        }
+                        
+                        // Actualizar estadísticas de manera segura
+                        const statsElements = {
+                            'personasDetenidas': estado.alertas_detenidas || 0,
+                            'movimientosSospechosos': estado.alertas_sospechosas || 0
+                        };
+                        
+                        Object.entries(statsElements).forEach(([id, value]) => {
+                            const element = document.getElementById(id);
+                            if (element) {
+                                element.textContent = value;
+                            }
+                        });
+                        
+                        // Actualizar nivel de amenaza
+                        if (estado.nivel_amenaza) {
+                            updateThreatLevel(estado.nivel_amenaza);
+                        }
+                        
+                        // Solo mostrar mensaje de conexión una vez
+                        if (estado.matlab_connected && !window.matlabConnected) {
+                            addEvent('system', 'SISTEMA', '🔗 API Lista - Puerto 8000 activo');
+                            window.matlabConnected = true;
+                        }
+                    } else {
+                        console.warn('Respuesta de API sin datos válidos:', data);
+                    }
+                } catch (error) {
+                    console.error('Error detallado cargando estado del sistema:', error);
+                    // Solo mostrar error una vez por minuto para evitar spam
+                    const now = Date.now();
+                    if (!window.lastErrorTime || now - window.lastErrorTime > 60000) {
+                        addEvent('system', 'SISTEMA', '❌ Error de conexión con servidor');
+                        window.lastErrorTime = now;
+                    }
+                }
+            }
+            
+            async function cargarAlertasRecientes() {
+                try {
+                    const response = await fetch('/api/alertas/recientes');
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.data.length > 0) {
+                        // Filtrar solo alertas reales y recientes
+                        const alertasReales = data.data.filter(alerta => {
+                            // Excluir alertas de prueba
+                            const esPrueba = alerta.description.includes('PRUEBA desde PHP') || 
+                                           alerta.description.includes('PRUEBA:') ||
+                                           alerta.track_id >= 900;
+                            
+                            // Excluir falsas alarmas
+                            const esFalsaAlarma = alerta.is_false_alarm === true;
+                            
+                            // Excluir alertas muy antiguas (más de 2 horas)
+                            const fechaAlerta = new Date(alerta.created_at || alerta.alert_timestamp);
+                            const ahora = new Date();
+                            const dosHoras = 2 * 60 * 60 * 1000; // 2 horas en milisegundos
+                            const esMuyAntigua = (ahora - fechaAlerta) > dosHoras;
+                            
+                            // Solo incluir si NO es prueba, NO es falsa alarma y NO es muy antigua
+                            return !esPrueba && !esFalsaAlarma && !esMuyAntigua;
+                        });
+                        
+                        // Procesar solo nuevas alertas reales
+                        alertasReales.forEach(alerta => {
+                            if (alerta.id > lastAlertId) {
+                                const tipo = alerta.alert_type === 'persona_detenida' ? 'intruder' : 'movement';
+                                let mensaje = alerta.description;
+                                
+                                // Formatear mensaje de manera más limpia
+                                let mensajeLimpio = mensaje;
+                                if (!mensaje.includes('Track')) {
+                                    mensajeLimpio = `Track ${alerta.track_id}: ${mensaje}`;
+                                }
+                                
+                                // Formato específico según el tipo
+                                const iconoTipo = alerta.alert_type === 'persona_detenida' ? '🚫' : '⚠️';
+                                addEvent(alerta.alert_type, alerta.camera_id.toUpperCase(), `${iconoTipo} ${mensajeLimpio}`, true);
+                                
+                                if (alerta.alert_type === 'persona_detenida') {
+                                    triggerAlert('intruder');
+                                    showMatlabEvidence(alerta.alert_type, alerta.track_id, alerta.duration_seconds, alerta.frame_count);
+                                    updateMatlabConnectionStatus(true);
+                                } else if (alerta.alert_type === 'movimiento_sospechoso') {
+                                    showMatlabEvidence(alerta.alert_type, alerta.track_id, alerta.duration_seconds, alerta.frame_count);
+                                    updateMatlabConnectionStatus(true);
+                                }
+                                
+                                lastAlertId = Math.max(lastAlertId, alerta.id);
+                                
+                                // Actualizar estadísticas
+                                if (alerta.alert_type === 'persona_detenida') {
+                                    updateMatlabStats('personasDetenidas');
+                                } else if (alerta.alert_type === 'movimiento_sospechoso') {
+                                    updateMatlabStats('movimientosSospechosos');
+                                }
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error detallado cargando alertas recientes:', error);
+                    // Solo mostrar error de alertas esporádicamente
+                    if (Math.random() < 0.1) { // 10% de probabilidad
+                        addEvent('system', 'SISTEMA', '⚠️ Error cargando alertas recientes');
+                    }
+                }
+            }
+            
+            async function marcarAlertaVista(alertId) {
+                try {
+                    await fetch(`/api/alertas/${alertId}/marcar-vista`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                        },
+                        body: JSON.stringify({ notes: 'Vista desde interfaz web' })
+                    });
+                } catch (error) {
+                    console.error('Error marcando alerta como vista:', error);
+                }
+            }
+            
+            // Limpiar intervalos al salir de la página
+            window.addEventListener('beforeunload', function() {
+                if (intervaloEventos) {
+                    clearInterval(intervaloEventos);
+                }
+            });
+            
             // Inicializar
             document.addEventListener('DOMContentLoaded', function() {
                 updateTime();
                 setInterval(updateTime, 1000);
                 
-                // Agregar eventos iniciales para que parezca un sistema real
+                // Inicializar estado MATLAB
+                updateMatlabConnectionStatus(false);
+                
+                // Agregar eventos iniciales
                 setTimeout(() => {
-                    addEvent('system', 'SISTEMA', 'Sistema VIG-IA iniciado correctamente');
+                    addEvent('system', 'SISTEMA', 'VIG-IA iniciado - Esperando conexión MATLAB');
                 }, 1000);
                 
                 setTimeout(() => {
-                    addEvent('system', 'SISTEMA', 'Intentando conectar con MATLAB... ❌ Sin conexión');
+                    addEvent('system', 'SISTEMA', 'API Lista - Puerto 8000 activo');
+                }, 1500);
+                
+                // Cargar estado inicial del sistema
+                setTimeout(() => {
+                    cargarEstadoSistema();
                 }, 2000);
                 
-                setTimeout(() => {
-                    addEvent('system', 'CAM-01', 'Cámara desconectada - Sistema en modo offline');
-                }, 3000);
-                
-                // Simular actividad normal cada 30-60 segundos
+                // Simular actualización de tiempo activo
                 setInterval(() => {
-                    if (Math.random() > 0.7) {
-                        simulateEvent('student');
-                    } else if (Math.random() > 0.8) {
-                        simulateEvent('movement');
-                    }
-                }, Math.random() * 30000 + 30000);
+                    updateActiveTime();
+                }, 60000); // cada minuto
+                
+                // Polling cada 5 segundos para nuevas alertas
+                setInterval(() => {
+                    cargarAlertasRecientes();
+                }, 5000);
+                
+                // Actualizar estado del sistema cada 30 segundos
+                setInterval(() => {
+                    cargarEstadoSistema();
+                }, 30000);
             });
         </script>
     </body>
