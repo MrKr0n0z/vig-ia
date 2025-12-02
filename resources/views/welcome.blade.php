@@ -394,7 +394,6 @@
             let lastAlertId = 0; // Para polling de nuevas alertas
             let eventosAutomaticos = false; // Control de eventos programados
             let intervaloEventos = null; // Referencia al intervalo
-            let alertasValidasEnFeed = 0; // Contador de alertas válidas visibles en el feed
             
             // Función para actualizar la hora
             function updateTime() {
@@ -429,11 +428,6 @@
                 
                 eventCount++;
                 
-                // Contar alertas válidas (no de sistema, no de actividad normal)
-                if (isAlert && (type === 'persona_detenida' || type === 'movimiento_sospechoso' || type === 'intruder' || type === 'movement')) {
-                    alertasValidasEnFeed++;
-                }
-                
                 const eventElement = document.createElement('div');
                 eventElement.className = `event-item p-2 rounded mb-1 ${isAlert ? 'bg-red-900 border border-red-500 animate-pulse' : 'bg-gray-800 border border-gray-600'}`;
                 
@@ -442,10 +436,7 @@
                     'intruder': '🚨',
                     'movement': 'ℹ️',
                     'system': '⚙️',
-                    'guard': '👮‍♂️',
-                    'persona_detenida': '🚫',
-                    'movimiento_sospechoso': '⚠️',
-                    'normal': '✅'
+                    'guard': '👮‍♂️'
                 };
                 
                 eventElement.innerHTML = `
@@ -461,33 +452,12 @@
                 const eventItems = eventFeed.querySelectorAll('.event-item');
                 if (eventItems.length > 20) {
                     eventFeed.removeChild(eventItems[eventItems.length - 1]);
-                    // Si se elimina un evento que era una alerta, decrementar el contador
-                    const removedEvent = eventItems[eventItems.length - 1];
-                    if (removedEvent.classList.contains('bg-red-900')) {
-                        alertasValidasEnFeed = Math.max(0, alertasValidasEnFeed - 1);
-                    }
                 }
                 
-                // Actualizar nivel de amenaza basado en alertas válidas en el feed
-                updateThreatLevelBasedOnFeed();
+                // Actualizar nivel de amenaza si es una alerta
+                if (isAlert && type === 'intruder') {
+                    updateThreatLevel(3);
                     showEvidence(type);
-                }
-            }
-            
-            // Función para calcular nivel de amenaza basado en el feed
-            function updateThreatLevelBasedOnFeed() {
-                let nivel = 1; // Normal por defecto
-                
-                if (alertasValidasEnFeed > 2) {
-                    nivel = 2; // Precaución
-                }
-                if (alertasValidasEnFeed > 5) {
-                    nivel = 3; // Crítico
-                }
-                
-                // Solo actualizar si es diferente al nivel actual
-                if (nivel !== currentThreatLevel) {
-                    updateThreatLevel(nivel);
                 }
             }
             
@@ -935,10 +905,6 @@
             // Función para limpiar el feed de eventos
             function clearEventFeed() {
                 document.getElementById('eventFeed').innerHTML = '<div class="text-center text-gray-500 text-sm">Feed de eventos limpio</div>';
-                
-                // Resetear contadores
-                alertasValidasEnFeed = 0;
-                eventCount = 0;
                 updateThreatLevel(1);
                 resetEvidencePanel();
                 
@@ -1142,9 +1108,8 @@
                             }
                         });
                         
-                        // Solo actualizar nivel de amenaza si no hay alertas en el feed
-                        // El feed tiene prioridad sobre el estado del sistema
-                        if (alertasValidasEnFeed === 0 && estado.nivel_amenaza) {
+                        // Actualizar nivel de amenaza
+                        if (estado.nivel_amenaza) {
                             updateThreatLevel(estado.nivel_amenaza);
                         }
                         
