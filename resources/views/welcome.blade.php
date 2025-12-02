@@ -434,9 +434,10 @@
             }
             
             // Función para agregar eventos al feed
-            function addEvent(type, camera, message, isAlert = false) {
-                const now = new Date();
+            function addEvent(type, camera, message, isAlert = false, alertId = null, customTimestamp = null) {
+                const now = customTimestamp ? new Date(customTimestamp) : new Date();
                 const timeString = now.toLocaleTimeString('es-ES', { hour12: false });
+                const dateString = customTimestamp ? now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }) : '';
                 const eventFeed = document.getElementById('eventFeed');
                 
                 if (!eventFeed) {
@@ -460,18 +461,23 @@
                     'normal': '✅'
                 };
                 
+                // Mostrar ID de alerta si está disponible
+                const idDisplay = alertId ? `<span class="bg-blue-600 text-white px-1 py-0.5 rounded text-xs font-mono mr-2">ID:${alertId}</span>` : '';
+                const fullTimeDisplay = dateString ? `${dateString} ${timeString}` : timeString;
+                
                 eventElement.innerHTML = `
-                    <span class="text-green-400 font-mono text-xs">${timeString}</span> - 
+                    <span class="text-green-400 font-mono text-xs">${fullTimeDisplay}</span> - 
                     <span class="text-blue-300">[${camera}]</span> 
+                    ${idDisplay}
                     <span class="text-xl">${icons[type] || '📝'}</span> 
                     <span class="text-white">${message}</span>
                 `;
                 
                 eventFeed.insertBefore(eventElement, eventFeed.firstChild);
                 
-                // Mantener solo los últimos 20 eventos
+                // Mantener solo los últimos 50 eventos (aumentado para BD)
                 const eventItems = eventFeed.querySelectorAll('.event-item');
-                if (eventItems.length > 20) {
+                if (eventItems.length > 50) {
                     eventFeed.removeChild(eventItems[eventItems.length - 1]);
                 }
                 
@@ -582,6 +588,7 @@
             function simulateMatlabAlert(alertType) {
                 const trackId = Math.floor(Math.random() * 50) + 1;
                 const frameCount = Math.floor(Math.random() * 1000) + 500;
+                const simulatedAlertId = Math.floor(Math.random() * 9000) + 1000; // ID simulado para distinguir
                 
                 let message, duration, isHighAlert;
                 
@@ -603,8 +610,8 @@
                     updateMatlabStats('movimientosSospechosos');
                 }
                 
-                // Agregar al feed
-                addEvent(alertType, 'CAM-01', message, isHighAlert);
+                // Agregar al feed con ID simulado
+                addEvent(alertType, 'CAM-01', message, isHighAlert, simulatedAlertId);
                 
                 // Actualizar panel de evidencia
                 showMatlabEvidence(alertType, trackId, duration, frameCount);
@@ -1220,6 +1227,8 @@
                     const data = await response.json();
                     
                     if (data.success && data.data.length > 0) {
+                        console.log(`📥 Cargando ${data.data.length} alertas desde la BD`);
+                        
                         // Filtrar alertas (solo excluir pruebas obvias)
                         const alertasValidas = data.data.filter(alerta => {
                             // Excluir solo alertas de prueba muy obvias
@@ -1230,10 +1239,18 @@
                             return !esPruebaObvia;
                         });
                         
-                        // Procesar solo nuevas alertas válidas (evitar duplicados)
+                        console.log(`✅ ${alertasValidas.length} alertas válidas encontradas`);
+                        
+                        // Al inicio, cargar TODAS las alertas (sin filtro de nuevas)
+                        const esInicializacion = processedAlertIds.size === 0;
+                        
+                        // Procesar alertas válidas
                         alertasValidas.forEach(alerta => {
-                            // Verificar que no hayamos procesado ya esta alerta
-                            if (alerta.id > lastAlertId && !processedAlertIds.has(alerta.id)) {
+                            // Si es la primera carga, mostrar todas; si no, solo las nuevas
+                            const debeProcessar = esInicializacion || 
+                                                (alerta.id > lastAlertId && !processedAlertIds.has(alerta.id));
+                                                
+                            if (debeProcessar) {
                                 // Marcar como procesada
                                 processedAlertIds.add(alerta.id);
                                 
@@ -1248,7 +1265,10 @@
                                 
                                 // Formato específico según el tipo
                                 const iconoTipo = alerta.alert_type === 'persona_detenida' ? '🚫' : '⚠️';
-                                addEvent(alerta.alert_type, alerta.camera_id.toUpperCase(), `${iconoTipo} ${mensajeLimpio}`, true);
+                                const isHighPriority = alerta.alert_type === 'persona_detenida';
+                                
+                                // Usar timestamp original de la alerta
+                                addEvent(alerta.alert_type, alerta.camera_id.toUpperCase(), `${iconoTipo} ${mensajeLimpio}`, isHighPriority, alerta.id, alerta.alert_timestamp);
                                 
                                 // Mostrar evidencia para todos los tipos de alerta
                                 console.log('Procesando alerta MATLAB:', alerta.alert_type, alerta.track_id);
