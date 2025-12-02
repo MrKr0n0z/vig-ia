@@ -285,6 +285,11 @@
                                     class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-1 px-2 rounded text-xs transition-all duration-200">
                                 🧹 Limpiar BD
                             </button>
+                            
+                            <button onclick="detenerAlertas()" 
+                                    class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-2 rounded text-xs transition-all duration-200">
+                                🛑 Detener
+                            </button>
                         </div>
                         <button onclick="clearEventFeed()" 
                                 class="w-full mt-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-1 px-2 rounded text-xs transition-all duration-200">
@@ -391,9 +396,10 @@
             let eventCount = 0;
             let currentThreatLevel = 1; // 1=Normal, 2=Precaución, 3=Crítico
             let events = [];
-            let lastAlertId = 0; // Para polling de nuevas alertas
+            let lastAlertId = localStorage.getItem('lastAlertId') ? parseInt(localStorage.getItem('lastAlertId')) : 0; // Persistir entre sesiones
             let eventosAutomaticos = false; // Control de eventos programados
             let intervaloEventos = null; // Referencia al intervalo
+            let processedAlertIds = new Set(); // Para evitar alertas duplicadas
             
             // Función para actualizar la hora
             function updateTime() {
@@ -938,8 +944,10 @@
                     if (el) el.textContent = '0';
                 });
                 
-                // Resetear lastAlertId
+                // Resetear lastAlertId y limpiar conjunto de alertas procesadas
                 lastAlertId = 0;
+                localStorage.setItem('lastAlertId', '0');
+                processedAlertIds.clear();
             }
             
             // Función para resetear el panel de evidencia
@@ -1089,6 +1097,21 @@
                 clearAlerts();
             }
             
+            // Función para detener alertas inmediatamente
+            function detenerAlertas() {
+                // Marcar el último ID como muy alto para ignorar alertas existentes
+                const alertasMuyAltas = 99999;
+                lastAlertId = alertasMuyAltas;
+                localStorage.setItem('lastAlertId', alertasMuyAltas.toString());
+                processedAlertIds.clear();
+                
+                // Mostrar mensaje de confirmación
+                addEvent('system', 'SISTEMA', '🛑 Alertas detenidas - Solo se mostrarán nuevas alertas', false);
+                
+                // Actualizar nivel de amenaza a normal
+                updateThreatLevel(1);
+            }
+            
             // Funciones para conectar con la API real
             async function cargarEstadoSistema() {
                 try {
@@ -1168,9 +1191,13 @@
                             return !esPruebaObvia;
                         });
                         
-                        // Procesar solo nuevas alertas válidas
+                        // Procesar solo nuevas alertas válidas (evitar duplicados)
                         alertasValidas.forEach(alerta => {
-                            if (alerta.id > lastAlertId) {
+                            // Verificar que no hayamos procesado ya esta alerta
+                            if (alerta.id > lastAlertId && !processedAlertIds.has(alerta.id)) {
+                                // Marcar como procesada
+                                processedAlertIds.add(alerta.id);
+                                
                                 const tipo = alerta.alert_type === 'persona_detenida' ? 'intruder' : 'movement';
                                 let mensaje = alerta.description;
                                 
@@ -1194,6 +1221,8 @@
                                 }
                                 
                                 lastAlertId = Math.max(lastAlertId, alerta.id);
+                                // Guardar en localStorage para persistir entre sesiones
+                                localStorage.setItem('lastAlertId', lastAlertId.toString());
                                 
                                 // Actualizar estadísticas
                                 if (alerta.alert_type === 'persona_detenida') {
