@@ -52,6 +52,18 @@ function sendAlertToAPI($url, $data) {
 echo "🧪 Probando endpoint de MATLAB en PRODUCCIÓN...\n";
 echo "🔗 URL: " . $apiUrl . "\n\n";
 
+echo "⚠️ ADVERTENCIA: Este script enviará alertas reales a producción.\n";
+echo "Estas alertas aparecerán en la interfaz web y se almacenarán en la base de datos.\n";
+echo "¿Estás seguro de que quieres continuar? (s/N): ";
+
+$confirmacion = trim(fgets(STDIN));
+if (strtolower($confirmacion) !== 's') {
+    echo "Operación cancelada por el usuario.\n";
+    exit(0);
+}
+
+echo "\n";
+
 foreach ($testData as $index => $alertData) {
     echo "Enviando alerta " . ($index + 1) . "...\n";
     echo "Datos: " . json_encode($alertData, JSON_PRETTY_PRINT) . "\n";
