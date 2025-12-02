@@ -247,30 +247,53 @@ class AlertController extends Controller
     public function obtenerEstadoSistema(): JsonResponse
     {
         try {
-            $alertasRecientes = Alert::recientes(24)->count();
-            $alertasNoVistas = Alert::noVistas()->count();
-            $alertasDetenidas = Alert::porTipo('persona_detenida')->recientes(24)->count();
-            $alertasSospechosas = Alert::porTipo('movimiento_sospechoso')->recientes(24)->count();
+            // Calcular estadísticas del sistema (solo alertas válidas)
+            // Filtrar alertas válidas: no falsas alarmas, no pruebas, y recientes (menos de 2 horas)
+            $alertasValidasRecientes = Alert::where('is_false_alarm', false)
+                ->where('track_id', '<', 900) // Excluir IDs de prueba
+                ->where('created_at', '>=', now()->subHours(2)) // Solo últimas 2 horas
+                ->where('description', 'NOT LIKE', '%PRUEBA%')
+                ->count();
+            
+            $alertasNoVistasValidas = Alert::where('is_viewed', false)
+                ->where('is_false_alarm', false)
+                ->where('track_id', '<', 900)
+                ->where('description', 'NOT LIKE', '%PRUEBA%')
+                ->count();
+            
+            $alertasDetenidasValidas = Alert::where('alert_type', 'persona_detenida')
+                ->where('is_false_alarm', false)
+                ->where('track_id', '<', 900)
+                ->where('created_at', '>=', now()->subHours(2))
+                ->where('description', 'NOT LIKE', '%PRUEBA%')
+                ->count();
+            
+            $alertasSospechosasValidas = Alert::where('alert_type', 'movimiento_sospechoso')
+                ->where('is_false_alarm', false)
+                ->where('track_id', '<', 900)
+                ->where('created_at', '>=', now()->subHours(2))
+                ->where('description', 'NOT LIKE', '%PRUEBA%')
+                ->count();
 
-            // Determinar nivel de amenaza basado en alertas recientes
+            // Determinar nivel de amenaza basado SOLO en alertas válidas
             $nivelAmenaza = 1; // Normal
-            if ($alertasRecientes > 5) {
+            if ($alertasValidasRecientes > 2) {
                 $nivelAmenaza = 2; // Precaución
             }
-            if ($alertasDetenidas > 0 || $alertasRecientes > 10) {
+            if ($alertasDetenidasValidas > 0 || $alertasValidasRecientes > 5) {
                 $nivelAmenaza = 3; // Crítico
             }
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'alertas_24h' => $alertasRecientes,
-                    'alertas_no_vistas' => $alertasNoVistas,
-                    'alertas_detenidas' => $alertasDetenidas,
-                    'alertas_sospechosas' => $alertasSospechosas,
+                    'alertas_24h' => $alertasValidasRecientes,
+                    'alertas_no_vistas' => $alertasNoVistasValidas,
+                    'alertas_detenidas' => $alertasDetenidasValidas,
+                    'alertas_sospechosas' => $alertasSospechosasValidas,
                     'nivel_amenaza' => $nivelAmenaza,
-                    'cameras_activas' => $alertasRecientes > 0 ? '1/1' : '0/1',
-                    'matlab_connected' => $alertasRecientes > 0,
+                    'cameras_activas' => $alertasValidasRecientes > 0 ? '1/1' : '0/1',
+                    'matlab_connected' => $alertasValidasRecientes > 0,
                     'ultima_actualizacion' => now()->toISOString()
                 ]
             ]);
