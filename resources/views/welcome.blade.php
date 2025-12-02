@@ -474,10 +474,12 @@
                 if (isAlert) {
                     if (type === 'persona_detenida' || type === 'intruder') {
                         updateThreatLevel(3);
-                        showEvidence(type);
+                        // Mostrar evidencia con datos de ejemplo
+                        showMatlabEvidence('persona_detenida', 999, 15, 450);
                     } else if (type === 'movimiento_sospechoso' || type === 'movement') {
                         updateThreatLevel(2);
-                        showEvidence(type);
+                        // Mostrar evidencia con datos de ejemplo
+                        showMatlabEvidence('movimiento_sospechoso', 998, 30, 900);
                     }
                 }
             }
