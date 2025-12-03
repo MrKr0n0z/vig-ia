@@ -1218,13 +1218,16 @@
             
             async function cargarAlertasRecientes() {
                 try {
+                    console.log('🔍 Iniciando carga de alertas recientes...');
                     const response = await fetch('/api/alertas/recientes');
                     
                     if (!response.ok) {
+                        console.error('❌ Error HTTP:', response.status, response.statusText);
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     
                     const data = await response.json();
+                    console.log('📊 Respuesta completa de la API:', data);
                     
                     if (data.success && data.data.length > 0) {
                         console.log(`📥 Cargando ${data.data.length} alertas desde la BD`);
@@ -1235,11 +1238,13 @@
                             const esPruebaObvia = alerta.description.includes('PRUEBA desde PHP') || 
                                                 alerta.track_id >= 900;
                             
+                            console.log(`🔍 Evaluando alerta ${alerta.id}: track_id=${alerta.track_id}, description="${alerta.description}", esPrueba=${esPruebaObvia}`);
+                            
                             // Incluir todas las demás alertas
                             return !esPruebaObvia;
                         });
                         
-                        console.log(`✅ ${alertasValidas.length} alertas válidas encontradas`);
+                        console.log(`✅ ${alertasValidas.length} alertas válidas encontradas de ${data.data.length} totales`);
                         
                         // Al inicio, cargar TODAS las alertas (sin filtro de nuevas)
                         const esInicializacion = processedAlertIds.size === 0;
@@ -1291,6 +1296,13 @@
                                 }
                             }
                         });
+                    } else {
+                        console.log('ℹ️ No hay alertas nuevas o la respuesta no fue exitosa');
+                        if (data.success) {
+                            console.log(`📊 Respuesta exitosa pero sin datos: ${data.data ? data.data.length : 0} alertas`);
+                        } else {
+                            console.log('❌ Respuesta no exitosa:', data);
+                        }
                     }
                 } catch (error) {
                     console.error('Error detallado cargando alertas recientes:', error);
