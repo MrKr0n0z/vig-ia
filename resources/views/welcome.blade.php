@@ -1345,6 +1345,12 @@
                     cargarEstadoSistema();
                 }, 2000);
                 
+                // Cargar alertas existentes inmediatamente
+                setTimeout(() => {
+                    console.log('🔄 Cargando alertas existentes de la BD...');
+                    cargarAlertasRecientes();
+                }, 2500);
+                
                 // Simular actualización de tiempo activo
                 setInterval(() => {
                     updateActiveTime();
