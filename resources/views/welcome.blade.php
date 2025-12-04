@@ -260,9 +260,9 @@
                         </div>
                     </div>
                     
-                    <!-- Controles de Simulación MATLAB -->
-                    <div class="mt-4">
-                        <div class="text-xs text-gray-400 mb-2">SIMULACIÓN DE ALERTAS MATLAB:</div>
+                    <!-- Controles de Simulación MATLAB (ocultos en producción) -->
+                    <div class="mt-4" style="display: none;">
+                        <div class="text-xs text-gray-400 mb-2">CONTROLES DE DESARROLLO:</div>
                         <div class="grid grid-cols-1 gap-2">
                             <button onclick="simulateMatlabAlert('persona_detenida')" 
                                     class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded text-sm transition-all duration-200">
